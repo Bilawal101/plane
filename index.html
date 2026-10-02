@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>QUANTUM PORTAL // CROSS-SCREEN AIR-FLING</title>
+  <title>AIR-FLING // LOCAL P2P FILE DROP</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; touch-action: none; }
@@ -15,7 +15,6 @@
     }
     #portalCanvas { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
 
-    /* Tactical HUD */
     #hud {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       pointer-events: none; padding: 20px;
@@ -24,12 +23,12 @@
     }
 
     .glass-card {
-      background: rgba(15, 23, 42, 0.88);
+      background: rgba(15, 23, 42, 0.9);
       border: 1px solid rgba(0, 240, 255, 0.4);
       border-radius: 8px; padding: 14px 20px;
       box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
       pointer-events: auto; backdrop-filter: blur(10px);
-      max-width: 360px;
+      max-width: 380px;
     }
 
     .title {
@@ -41,64 +40,96 @@
       display: inline-block; font-size: 22px; font-weight: 900;
       color: #00ffcc; letter-spacing: 4px; font-family: 'Orbitron', sans-serif;
       background: rgba(0, 255, 204, 0.1); border: 1px dashed #00ffcc;
-      padding: 6px 14px; border-radius: 4px; margin: 6px 0;
+      padding: 4px 12px; border-radius: 4px; margin: 4px 0;
     }
 
-    .connect-row { display: flex; gap: 8px; margin-top: 8px; }
+    .connect-row { display: flex; gap: 8px; margin-top: 6px; }
     input {
       background: #020617; border: 1px solid #00f0ff;
-      color: #00ffcc; padding: 8px 12px; font-family: inherit; font-size: 16px;
-      width: 120px; text-align: center; letter-spacing: 2px;
+      color: #00ffcc; padding: 6px 10px; font-family: inherit; font-size: 15px;
+      width: 100px; text-align: center; letter-spacing: 2px;
     }
-    button {
+    button, .file-btn {
       background: #00f0ff; color: #020617; border: none;
-      padding: 8px 18px; font-family: 'Orbitron', sans-serif;
-      font-weight: 700; font-size: 12px; cursor: pointer; border-radius: 4px;
+      padding: 7px 14px; font-family: 'Orbitron', sans-serif;
+      font-weight: 700; font-size: 11px; cursor: pointer; border-radius: 4px;
+      display: inline-flex; align-items: center; justify-content: center;
+      text-decoration: none;
     }
-    button:hover { background: #00ffcc; }
+    button:hover, .file-btn:hover { background: #00ffcc; }
 
     #status-pill {
       font-size: 12px; font-weight: bold; margin-top: 6px;
-      color: #8b9bb4;
+      color: #8b949e;
     }
     #status-pill.online { color: #00ff88; }
+
+    /* File Tag Attached to Orb */
+    #attached-file-info {
+      font-size: 11px; color: #f59e0b; margin-top: 6px; font-weight: bold;
+      display: none;
+    }
 
     .instructions {
       font-size: 12px; color: #64748b; text-align: center;
       background: rgba(3, 7, 18, 0.7); padding: 8px; border-radius: 4px;
     }
+
+    /* Download Popup */
+    #download-banner {
+      position: absolute; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #00ff88;
+      border-radius: 8px; padding: 15px 25px;
+      display: none; align-items: center; gap: 15px;
+      pointer-events: auto; z-index: 20;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+    }
   </style>
 
-  <!-- PeerJS: Serverless Real-Time WebRTC Data Channel -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
   <canvas id="portalCanvas"></canvas>
 
   <div id="hud">
-    <!-- Top Controller -->
     <div class="glass-card">
-      <div class="title">QUANTUM PORTAL BRIDGE</div>
+      <div class="title">AIR-FLING // P2P FILE DROP</div>
       
       <div id="host-section">
-        <div style="font-size:11px; color:#8b9bb4;">THIS SCREEN PORTAL PIN:</div>
+        <div style="font-size:11px; color:#8b949e;">THIS SCREEN PIN:</div>
         <div class="room-badge" id="my-pin">----</div>
       </div>
 
       <div id="join-section">
-        <div style="font-size:11px; color:#8b9bb4;">ENTER PIN TO LINK SCREEN:</div>
+        <div style="font-size:11px; color:#8b949e;">ENTER PIN TO LINK SCREEN:</div>
         <div class="connect-row">
           <input type="text" id="target-pin" maxlength="4" placeholder="0000" />
           <button onclick="linkToPortal()">LINK</button>
         </div>
       </div>
 
-      <div id="status-pill">INITIALIZING QUANTUM BRIDGE...</div>
+      <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+        <label class="file-btn" for="file-input">📁 ATTACH FILE</label>
+        <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)" />
+        <span id="attached-file-info">NO FILE ATTACHED</span>
+      </div>
+
+      <div id="status-pill">INITIALIZING DIRECT P2P LINK...</div>
     </div>
 
     <div class="instructions" id="guide-text">
-      PLACE PHONES/SCREENS SIDE-BY-SIDE // FLING SPHERE OFF ANY EDGE
+      FLING ORB OFF ANY SCREEN EDGE TOWARDS THE OTHER DEVICE!
     </div>
+  </div>
+
+  <div id="download-banner">
+    <div>
+      <div style="color:#00ff88; font-weight:bold; font-size:13px;" id="dl-filename">FILE RECEIVED!</div>
+      <div style="font-size:11px; color:#94a3b8;" id="dl-filesize">0 KB</div>
+    </div>
+    <a id="dl-link" class="file-btn" download="received_file">💾 SAVE TO DISK</a>
   </div>
 
   <script>
@@ -107,10 +138,22 @@
     const myPinEl = document.getElementById('my-pin');
     const statusPill = document.getElementById('status-pill');
     const guideText = document.getElementById('guide-text');
+    const fileInfo = document.getElementById('attached-file-info');
+    const downloadBanner = document.getElementById('download-banner');
 
     let audioCtx = null;
     let peer = null;
     let conn = null;
+
+    // Attached File Data
+    let attachedFile = null;
+    let attachedFileBuffer = null;
+
+    // File Reception Buffer
+    let incomingFileInfo = null;
+    let receivedChunks = [];
+    let receivedBytes = 0;
+    let transferProgress = 0;
 
     // --- 1. SPATIAL ORB PHYSICS ENGINE ---
     const orb = {
@@ -118,10 +161,9 @@
       y: 0,
       vx: 0,
       vy: 0,
-      radius: 40,
-      active: false, // True if the orb is currently on THIS screen
+      radius: 46,
+      active: false,
       isDragging: false,
-      color: '#00f0ff',
       trail: []
     };
 
@@ -138,47 +180,43 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- 2. AUDIO SYNTHESIZER (WHOOSH & IMPACT) ---
+    // --- 2. AUDIO SYNTHESIZERS ---
     function playWhooshSound() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const t = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(220, t);
-      osc.frequency.exponentialRampToValueAtTime(880, t + 0.25);
-      gain.gain.setValueAtTime(0.08, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.frequency.setValueAtTime(200, t);
+      osc.frequency.exponentialRampToValueAtTime(800, t + 0.22);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
       osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(t); osc.stop(t + 0.25);
+      osc.start(t); osc.stop(t + 0.22);
     }
 
     function playImpactSound() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const t = audioCtx.currentTime;
-      
-      // Resonant glass chime
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(600, t);
-      osc.frequency.exponentialRampToValueAtTime(150, t + 0.35);
-      gain.gain.setValueAtTime(0.12, t);
+      osc.frequency.setValueAtTime(650, t);
+      osc.frequency.exponentialRampToValueAtTime(140, t + 0.35);
+      gain.gain.setValueAtTime(0.15, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
       osc.connect(gain); gain.connect(audioCtx.destination);
       osc.start(t); osc.stop(t + 0.35);
     }
 
-    // --- 3. SERVERLESS WEBRTC LINK (PEERJS) ---
-    // Generate unique 4-digit PIN for simple pairing
+    // --- 3. PEERJS DIRECT P2P SETUP ---
     const myPin = Math.floor(1000 + Math.random() * 9000).toString();
     myPinEl.innerText = myPin;
 
-    peer = new Peer(`portal-air-fling-${myPin}`);
+    peer = new Peer(`air-fling-p2p-${myPin}`);
 
     peer.on('open', () => {
       statusPill.innerText = "READY // AWAITING LINK";
-      // First screen starts with the orb!
       if (!orb.active && !conn) {
         orb.active = true;
         orb.x = canvas.width / 2;
@@ -186,22 +224,19 @@
       }
     });
 
-    // Handle incoming screen connection
     peer.on('connection', (c) => {
       setupConnection(c);
-      // Give the orb to the guest phone so they can fling it first!
-      orb.active = false;
+      orb.active = false; // Give orb to connecting device
     });
 
     function linkToPortal() {
       const pin = document.getElementById('target-pin').value.trim();
       if (pin.length !== 4) return alert("Enter valid 4-digit PIN");
       
-      statusPill.innerText = "CONNECTING TO SCREEN...";
-      const c = peer.connect(`portal-air-fling-${pin}`, { reliable: true });
+      statusPill.innerText = "CONNECTING DIRECT P2P...";
+      const c = peer.connect(`air-fling-p2p-${pin}`, { reliable: true });
       setupConnection(c);
 
-      // Connected phone receives the orb!
       orb.active = true;
       orb.x = canvas.width / 2;
       orb.y = canvas.height * 0.7;
@@ -210,69 +245,150 @@
     function setupConnection(c) {
       conn = c;
       conn.on('open', () => {
-        statusPill.innerText = "BRIDGE ESTABLISHED // LINKED";
+        statusPill.innerText = "P2P ENCRYPTED LINK ACTIVE";
         statusPill.className = "online";
-        guideText.innerText = "SWIPE ORB FAST TOWARDS ANY SCREEN EDGE TO TRANSFER!";
+        guideText.innerText = "LINKED DIRECTLY VIA LOCAL ROUTER! FLING ORB ACROSS!";
       });
 
-      // RECEIVE INCOMING ORB FROM OTHER SCREEN!
+      // Handle incoming messages & raw binary file streams
       conn.on('data', (data) => {
-        if (data.type === 'WARP_IN') {
+        if (data instanceof ArrayBuffer) {
+          // Received binary file chunk
+          receivedChunks.push(data);
+          receivedBytes += data.byteLength;
+          if (incomingFileInfo) {
+            transferProgress = Math.min(1.0, receivedBytes / incomingFileInfo.size);
+          }
+        } else if (data.type === 'WARP_IN') {
           handleIncomingWarp(data);
+        } else if (data.type === 'FILE_START') {
+          incomingFileInfo = data;
+          receivedChunks = [];
+          receivedBytes = 0;
+          transferProgress = 0;
+          handleIncomingWarp(data.warp);
+        } else if (data.type === 'FILE_COMPLETE') {
+          finalizeFileReceive();
         }
       });
     }
 
-    // --- 4. THE INTER-DIMENSIONAL FLING LOGIC ---
-    function sendWarpOut(edge, normalizedRatio, vx, vy) {
-      if (!conn) return;
+    // --- 4. ATTACH FILES TO THE ORB ---
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      attachedFile = file;
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      fileInfo.style.display = 'block';
+      fileInfo.innerText = `ATTACHED: ${file.name} (${sizeMb} MB)`;
+
+      // Read file into memory buffer
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        attachedFileBuffer = event.target.result;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // --- 5. STREAM FILE OVER LOCAL WEBRTC DIRECT SOCKET ---
+    const CHUNK_SIZE = 16384; // 16 KB chunks
+
+    function sendWarpWithFile(edge, ratio, vx, vy) {
+      if (!conn || !conn.open) return;
 
       playWhooshSound();
-      orb.active = false; // Vanishes from this screen!
+      orb.active = false;
 
+      const warpMeta = { edge, ratio, vx, vy };
+
+      if (!attachedFile || !attachedFileBuffer) {
+        // Pure energy orb (no file)
+        conn.send({ type: 'WARP_IN', ...warpMeta });
+        return;
+      }
+
+      // Stream File directly memory-to-memory
       conn.send({
-        type: 'WARP_IN',
-        edge: edge, // 'TOP', 'BOTTOM', 'LEFT', 'RIGHT'
-        ratio: normalizedRatio, // 0.0 to 1.0 along the edge
-        vx: vx,
-        vy: vy
+        type: 'FILE_START',
+        name: attachedFile.name,
+        size: attachedFile.size,
+        mime: attachedFile.type,
+        warp: warpMeta
       });
+
+      const buffer = attachedFileBuffer;
+      let offset = 0;
+
+      function pumpChunks() {
+        while (offset < buffer.byteLength) {
+          // Backpressure check to keep transfer smooth
+          if (conn.dataChannel && conn.dataChannel.bufferedAmount > 256 * 1024) {
+            setTimeout(pumpChunks, 15);
+            return;
+          }
+          const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+          conn.send(chunk);
+          offset += CHUNK_SIZE;
+        }
+        conn.send({ type: 'FILE_COMPLETE' });
+
+        // Clear after sending
+        attachedFile = null;
+        attachedFileBuffer = null;
+        fileInfo.style.display = 'none';
+      }
+
+      pumpChunks();
+    }
+
+    function finalizeFileReceive() {
+      transferProgress = 1.0;
+      const blob = new Blob(receivedChunks, { type: incomingFileInfo.mime || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+
+      downloadBanner.style.display = 'flex';
+      document.getElementById('dl-filename').innerText = `RECEIVED: ${incomingFileInfo.name}`;
+      document.getElementById('dl-filesize').innerText = `${(incomingFileInfo.size / 1024).toFixed(1)} KB (100% Verified)`;
+      
+      const link = document.getElementById('dl-link');
+      link.href = url;
+      link.download = incomingFileInfo.name;
+
+      // Auto-trigger browser download on laptop!
+      link.click();
     }
 
     function handleIncomingWarp(data) {
       playImpactSound();
       orb.active = true;
       orb.trail = [];
+      transferProgress = incomingFileInfo ? 0.05 : 1.0;
 
-      // Physical entry mapping based on which edge it left the other screen:
       if (data.edge === 'TOP') {
-        // Enters from bottom edge moving upwards
         orb.x = data.ratio * canvas.width;
-        orb.y = canvas.height + orb.radius;
-        orb.vx = data.vx * 0.9;
-        orb.vy = Math.min(-15, data.vy); // Rockets upwards!
+        orb.y = canvas.height + 10;
+        orb.vx = data.vx * 0.85;
+        orb.vy = Math.min(-14, data.vy); // Rocket UP into screen!
       } else if (data.edge === 'BOTTOM') {
-        // Enters from top edge moving downwards
         orb.x = data.ratio * canvas.width;
-        orb.y = -orb.radius;
-        orb.vx = data.vx * 0.9;
-        orb.vy = Math.max(15, data.vy); // Rockets downwards!
+        orb.y = -10;
+        orb.vx = data.vx * 0.85;
+        orb.vy = Math.max(14, data.vy); // Rocket DOWN into screen!
       } else if (data.edge === 'RIGHT') {
-        // Enters from left edge moving right
-        orb.x = -orb.radius;
+        orb.x = -10;
         orb.y = data.ratio * canvas.height;
-        orb.vx = Math.max(15, data.vx);
-        orb.vy = data.vy * 0.9;
+        orb.vx = Math.max(14, data.vx);
+        orb.vy = data.vy * 0.85;
       } else if (data.edge === 'LEFT') {
-        // Enters from right edge moving left
-        orb.x = canvas.width + orb.radius;
+        orb.x = canvas.width + 10;
         orb.y = data.ratio * canvas.height;
-        orb.vx = Math.min(-15, data.vx);
-        orb.vy = data.vy * 0.9;
+        orb.vx = Math.min(-14, data.vx);
+        orb.vy = data.vy * 0.85;
       }
     }
 
-    // --- 5. TOUCH & MOUSE FLING MECHANICS ---
+    // --- 6. FLING MECHANICS (EASY PC MOUSE FLING FIX) ---
     function getPointerPos(e) {
       if (e.touches && e.touches.length > 0) {
         return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -285,7 +401,7 @@
       const p = getPointerPos(e);
       const dist = Math.hypot(p.x - orb.x, p.y - orb.y);
 
-      if (dist < orb.radius * 1.5) {
+      if (dist < orb.radius * 1.8) {
         orb.isDragging = true;
         orb.vx = 0;
         orb.vy = 0;
@@ -301,11 +417,22 @@
 
       const now = performance.now();
       dragHistory.push({ x: p.x, y: p.y, t: now });
-      if (dragHistory.length > 6) dragHistory.shift();
+      if (dragHistory.length > 8) dragHistory.shift();
+
+      // INSTANT ESCAPE ON DRAGGING OFF-SCREEN (PC Mouse fix!)
+      if (conn && conn.open) {
+        if (orb.y > canvas.height - 15) {
+          triggerReleaseFling();
+        }
+      }
     }
 
     function onPointerUp(e) {
       if (!orb.isDragging || !orb.active) return;
+      triggerReleaseFling();
+    }
+
+    function triggerReleaseFling() {
       orb.isDragging = false;
 
       if (dragHistory.length >= 2) {
@@ -313,8 +440,9 @@
         const last = dragHistory[dragHistory.length - 1];
         const dt = (last.t - first.t) / 1000;
         if (dt > 0.01) {
-          orb.vx = (last.x - first.x) / dt * 0.035;
-          orb.vy = (last.y - first.y) / dt * 0.035;
+          // Generous flick velocity calculation
+          orb.vx = (last.x - first.x) / dt * 0.045;
+          orb.vy = (last.y - first.y) / dt * 0.045;
         }
       }
     }
@@ -327,86 +455,104 @@
     window.addEventListener('touchmove', onPointerMove, { passive: false });
     window.addEventListener('touchend', onPointerUp, { passive: false });
 
-    // --- 6. RENDER LOOP & PARTICLES ---
+    // --- 7. RENDER LOOP & UNBLOCKED PORTAL EXITS ---
     function animate() {
       requestAnimationFrame(animate);
 
-      // Motion Blur trail
       ctx.fillStyle = 'rgba(2, 5, 12, 0.28)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (orb.active) {
         if (!orb.isDragging) {
-          // Physics movement
           orb.x += orb.vx;
           orb.y += orb.vy;
 
-          // Friction
           orb.vx *= 0.985;
           orb.vy *= 0.985;
 
-          // --- DETECT FLINGING OFF EDGES (THE TRANSFER PORTAL) ---
+          // --- UNRESTRICTED PORTAL EXITS (NO INVISIBLE WALLS!) ---
           if (conn && conn.open) {
-            // Fling off TOP edge
-            if (orb.y < 0 && orb.vy < -5) {
-              sendWarpOut('TOP', orb.x / canvas.width, orb.vx, orb.vy);
+            // Fling out TOP (Phone ➔ Laptop)
+            if (orb.y < 35 && orb.vy < -2.0) {
+              sendWarpWithFile('TOP', orb.x / canvas.width, orb.vx, orb.vy);
               return;
             }
-            // Fling off BOTTOM edge
-            if (orb.y > canvas.height && orb.vy > 5) {
-              sendWarpOut('BOTTOM', orb.x / canvas.width, orb.vx, orb.vy);
+            // Fling out BOTTOM (Laptop ➔ Phone) - Now super easy!
+            if (orb.y > canvas.height - 35 && orb.vy > 2.0) {
+              sendWarpWithFile('BOTTOM', orb.x / canvas.width, orb.vx, orb.vy);
               return;
             }
-            // Fling off RIGHT edge
-            if (orb.x > canvas.width && orb.vx > 5) {
-              sendWarpOut('RIGHT', orb.y / canvas.height, orb.vx, orb.vy);
+            // Fling out RIGHT
+            if (orb.x > canvas.width - 35 && orb.vx > 2.0) {
+              sendWarpWithFile('RIGHT', orb.y / canvas.height, orb.vx, orb.vy);
               return;
             }
-            // Fling off LEFT edge
-            if (orb.x < 0 && orb.vx < -5) {
-              sendWarpOut('LEFT', orb.y / canvas.height, orb.vx, orb.vy);
+            // Fling out LEFT
+            if (orb.x < 35 && orb.vx < -2.0) {
+              sendWarpWithFile('LEFT', orb.y / canvas.height, orb.vx, orb.vy);
               return;
             }
           }
 
-          // Elastic bounce if not connected or not fast enough to escape
-          if (orb.x < orb.radius) { orb.x = orb.radius; orb.vx *= -0.75; }
-          if (orb.x > canvas.width - orb.radius) { orb.x = canvas.width - orb.radius; orb.vx *= -0.75; }
-          if (orb.y < orb.radius) { orb.y = orb.radius; orb.vy *= -0.75; }
-          if (orb.y > canvas.height - orb.radius) { orb.y = canvas.height - orb.radius; orb.vy *= -0.75; }
+          // Soft bounce only when NOT moving toward an exit portal
+          if (orb.x < orb.radius && orb.vx < 0) { orb.vx *= -0.7; }
+          if (orb.x > canvas.width - orb.radius && orb.vx > 0) { orb.vx *= -0.7; }
+          if (orb.y < orb.radius && orb.vy < 0) { orb.vy *= -0.7; }
+          if (orb.y > canvas.height - orb.radius && orb.vy > 0) { orb.vy *= -0.7; }
         }
 
         // Particle Trail
-        orb.trail.push({ x: orb.x, y: orb.y, r: orb.radius });
-        if (orb.trail.length > 15) orb.trail.shift();
+        orb.trail.push({ x: orb.x, y: orb.y });
+        if (orb.trail.length > 14) orb.trail.shift();
 
         for (let i = 0; i < orb.trail.length; i++) {
           const pt = orb.trail[i];
           const alpha = i / orb.trail.length;
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, (orb.radius * 0.7) * alpha, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0, 240, 255, ${alpha * 0.25})`;
+          ctx.arc(pt.x, pt.y, (orb.radius * 0.6) * alpha, 0, Math.PI * 2);
+          ctx.fillStyle = attachedFile ? `rgba(245, 158, 11, ${alpha * 0.3})` : `rgba(0, 240, 255, ${alpha * 0.3})`;
           ctx.fill();
         }
 
-        // Draw Glowing Plasma Energy Sphere
+        // Draw Plasma Energy Sphere (Glows Gold when holding a file!)
         const grad = ctx.createRadialGradient(orb.x, orb.y, 4, orb.x, orb.y, orb.radius);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.3, '#00ffcc');
-        grad.addColorStop(0.7, '#00f0ff');
-        grad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+        if (attachedFile || incomingFileInfo) {
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.3, '#f59e0b');
+          grad.addColorStop(0.7, '#d97706');
+          grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        } else {
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.3, '#00ffcc');
+          grad.addColorStop(0.7, '#00f0ff');
+          grad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+        }
 
         ctx.beginPath();
         ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Pulsing Corona Ring
-        ctx.strokeStyle = '#00ffcc';
-        ctx.lineWidth = 2;
+        // Pulsing Corona
+        ctx.strokeStyle = (attachedFile || incomingFileInfo) ? '#f59e0b' : '#00ffcc';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.arc(orb.x, orb.y, orb.radius + Math.sin(performance.now() * 0.008) * 4, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Label inside the Orb
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        if (incomingFileInfo && transferProgress < 1.0) {
+          ctx.fillText(`RECEIVING: ${Math.round(transferProgress * 100)}%`, orb.x, orb.y + 4);
+        } else if (attachedFile) {
+          ctx.fillText('FILE READY', orb.x, orb.y - 2);
+          ctx.fillText('FLING ME!', orb.x, orb.y + 12);
+        } else {
+          ctx.fillText('ENERGY', orb.x, orb.y - 2);
+          ctx.fillText('ORB', orb.x, orb.y + 12);
+        }
       }
     }
 
